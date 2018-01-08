@@ -1,7 +1,7 @@
 FROM webdevops/bootstrap:ubuntu-16.04
 MAINTAINER Hans Hoechtl "hhoechtl@1drop.de"
 
-ENV POOTLE_VERSION="2.7.6"
+ENV POOTLE_VERSION="2.8.2"
 
 RUN chmod -R 2777 /tmp
 
@@ -26,8 +26,11 @@ RUN /usr/local/bin/apt-install build-essential \
   python-pip \
   python-xapian \
   xapian-tools \
-  python-setuptools
+  python-setuptools \
+  nodejs \
+  npm
 # Install python packages
+RUN pip install --upgrade pip
 RUN pip install -q virtualenv \
     MySQL-python \
     flup \
@@ -40,6 +43,7 @@ RUN pip install -I pootle==$POOTLE_VERSION
 # Configure pootle
 COPY pootle.conf /root/.pootle/pootle.conf
 RUN mkdir -p /srv/pootle/po/.tmp
+RUN mkdir /var/log/pootle
 RUN ln -s /usr/lib/python2.7/dist-packages/xapian /usr/local/lib/python2.7/dist-packages/xapian
 # RUN pootle setup
 COPY pootle.sh /etc/profile.d/pootle.sh
@@ -48,13 +52,13 @@ COPY scripts /home/pootle/scripts
 COPY templates /home/pootle/templates
 COPY frontend /usr/local/lib/python2.7/dist-packages/pootle/static
 COPY typo3.cron /etc/cron.d/typo3
+RUN cp -R /usr/local/lib/python2.7/dist-packages/pootle/translations/* /srv/pootle/po
 RUN cp -R /usr/lib/python2.7/dist-packages/xapian /usr/local/lib/python2.7/dist-packages/pootle/assets
 RUN pootle collectstatic --noinput --clear
 RUN pootle assets build
 
 WORKDIR /home/pootle
 
-EXPOSE 8080
 VOLUME ["/usr/local/lib/python2.7/dist-packages/pootle"]
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 CMD ["/usr/bin/supervisord"]
